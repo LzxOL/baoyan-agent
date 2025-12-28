@@ -31,6 +31,9 @@ export interface Material {
   uploaded_at?: string;
   created_at: string;
   updated_at: string;
+  // Compatibility aliases for camelCase fields used across the UI
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Application {
