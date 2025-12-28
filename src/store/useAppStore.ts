@@ -31,7 +31,7 @@ interface AppState {
   updateMaterial: (id: string, updates: Partial<Material>) => void;
   deleteMaterial: (id: string) => void;
   selectMaterial: (id: string | null) => void;
-  addMaterialVersion: (materialId: string, version: Material['versions'][0]) => void;
+  addMaterialVersion: (materialId: string, version: any) => void;
   setDefaultVersion: (materialId: string, versionId: string) => void;
   
   // 项目操作
@@ -120,9 +120,9 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           materials: state.materials.map((m) =>
             m.id === materialId
-              ? {
+                  ? {
                   ...m,
-                  versions: [...m.versions, version],
+                  versions: [...(m.versions || []), version],
                   currentVersionId: version.isDefault ? version.id : m.currentVersionId,
                   updatedAt: new Date(),
                 }
@@ -135,10 +135,10 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           materials: state.materials.map((m) =>
             m.id === materialId
-              ? {
+                  ? {
                   ...m,
                   currentVersionId: versionId,
-                  versions: m.versions.map((v) => ({
+                  versions: (m.versions || []).map((v) => ({
                     ...v,
                     isDefault: v.id === versionId,
                   })),
@@ -255,7 +255,7 @@ export const useAppStore = create<AppState>()(
         get().addNotification({
           type: 'match',
           title: '材料匹配成功',
-          message: `已为「${state.currentProject?.requirements.find(r => r.id === requirementId)?.name}」匹配材料。`,
+          message: `已为「${get().currentProject?.requirements.find(r => r.id === requirementId)?.name}」匹配材料。`,
           read: false,
         });
       },

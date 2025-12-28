@@ -453,7 +453,7 @@ export default function ProjectWorkspace() {
                               {matchedMaterial.name}
                             </p>
                             <p className="text-xs text-green-600">
-                              v{matchedMaterial.versions.length}
+                              v{matchedMaterial?.versions?.length ?? matchedMaterial?.version ?? 0}
                             </p>
                           </div>
                           <button

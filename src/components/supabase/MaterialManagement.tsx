@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase, type Material } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import type { Material } from '@/types';
 import SupabaseUpload from './SupabaseUpload';
 import {
   FileText,
@@ -116,10 +117,11 @@ export default function MaterialManagement() {
 
   // 过滤材料
   const filteredMaterials = materials.filter((material) => {
+    const title = (material.title || material.filename || '').toString();
     const matchesSearch =
-      material.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      material.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === 'all' || material.material_type === filterType;
+      title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (material.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = filterType === 'all' || ((material.type || material.file_type) === filterType);
     return matchesSearch && matchesType;
   });
 
@@ -263,19 +265,19 @@ export default function MaterialManagement() {
 
                 {/* 标签 */}
                 <div className="flex items-center gap-2 mt-3">
-                  {getStatusBadge(material.processing_status)}
+                  {getStatusBadge(material.processing_status || 'pending')}
                   <span className="text-xs text-slate-400">
-                    {formatFileSize(material.file_size)}
+                    {formatFileSize(material.file_size ?? 0)}
                   </span>
                 </div>
 
                 {/* 元信息 */}
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
                   <span>
-                    {format(new Date(material.uploaded_at), 'yyyy-MM-dd', { locale: zhCN })}
+                    {format(new Date(material.uploaded_at ?? 0), 'yyyy-MM-dd', { locale: zhCN })}
                   </span>
-                  <div className="flex items-center gap-1">
-                    {getStatusIcon(material.processing_status)}
+                    <div className="flex items-center gap-1">
+                    {getStatusIcon(material.processing_status || 'pending')}
                   </div>
                 </div>
 
@@ -329,16 +331,16 @@ export default function MaterialManagement() {
                     <span className="badge-gray">{material.category}</span>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-500">
-                    {formatFileSize(material.file_size)}
+                    {formatFileSize(material.file_size ?? 0)}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(material.processing_status)}
-                      {getStatusBadge(material.processing_status)}
-                    </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(material.processing_status || 'pending')}       
+                        {getStatusBadge(material.processing_status || 'pending')}      
+                      </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-500">
-                    {format(new Date(material.uploaded_at), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+                    {format(new Date(material.uploaded_at ?? 0), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
@@ -371,7 +373,7 @@ export default function MaterialManagement() {
       <div className="card p-4">
         <div className="flex items-center justify-between text-sm text-slate-500">
           <span>共 {filteredMaterials.length} 个材料</span>
-          <span>存储使用: {formatFileSize(filteredMaterials.reduce((sum, m) => sum + m.file_size, 0))}</span>
+          <span>存储使用: {formatFileSize(filteredMaterials.reduce((sum, m) => sum + (m.file_size ?? 0), 0))}</span>
         </div>
       </div>
     </div>

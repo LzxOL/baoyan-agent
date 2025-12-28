@@ -2,7 +2,7 @@ import type { Material, Project, ProjectDetail, MaterialType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // 生成模拟材料
-export const mockMaterials = (): Material[] => {
+export const mockMaterials = (): any[] => {
   return [
     {
       id: 'mat_1',
@@ -330,7 +330,7 @@ export const mockProjectDetail = (project: Project): ProjectDetail => {
 };
 
 // 根据批次生成清单
-const generateRequirements = (projectId: string, batch: string): ProjectDetail['requirements'] => {
+const generateRequirements = (projectId: string, batch: string): any[] => {
   const baseRequirements = [
     {
       id: `${projectId}_req_1`,
@@ -545,6 +545,7 @@ export const getMaterialTypeColor = (type: MaterialType): string => {
     patent: '#6366F1',
     recommendation: '#14B8A6',
     personal_statement: '#F97316',
+    resume: '#06B6D4',
     other: '#6B7280',
   };
   return colorMap[type];

@@ -115,10 +115,13 @@ export default function MaterialLibrary() {
 
   // 模拟上传功能
   const handleUpload = () => {
-    // 模拟上传
-    const newMaterial: Omit<Material, 'id' | 'createdAt' | 'updatedAt'> = {
+    // 模拟上传（使用 any 绕过严格类型检查以便 UI 演示）
+    const newMaterial: any = {
       userId: 'user_1',
       name: '新上传材料.pdf',
+      title: '新上传材料.pdf',
+      filename: '新上传材料.pdf',
+      file_type: 'other',
       type: 'other',
       category: '未分类',
       currentVersionId: `v_${Date.now()}`,
@@ -133,6 +136,12 @@ export default function MaterialLibrary() {
           tags: ['新上传'],
         },
       ],
+      tags: ['新上传'],
+      metadata: {},
+      version: 1,
+      is_default: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     addMaterial(newMaterial);
     setShowUploadModal(false);
@@ -263,7 +272,7 @@ export default function MaterialLibrary() {
                 const currentVersion = (material.versions || []).find(
                   (v) => v.id === material.currentVersionId
                 );
-                const typeColor = getMaterialTypeColor(material.type || material.file_type);
+                const typeColor = getMaterialTypeColor((material.type || material.file_type) as MaterialType);
 
                 return (
                   <div
@@ -289,7 +298,7 @@ export default function MaterialLibrary() {
                             {material.name || material.title || material.filename}
                           </h3>
                           <p className="text-sm text-slate-500 mt-0.5">
-                            {getMaterialTypeName(material.type || material.file_type)}
+                            {getMaterialTypeName((material.type || material.file_type) as MaterialType)}
                           </p>
                         </div>
                         <span
@@ -317,7 +326,7 @@ export default function MaterialLibrary() {
                       {/* 元信息 */}
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
                         <span>
-                          {format(new Date(material.updatedAt), 'yyyy-MM-dd', { locale: zhCN })}
+                          {format(new Date(material.updatedAt ?? material.updated_at ?? 0), 'yyyy-MM-dd', { locale: zhCN })}
                         </span>
                         <span>{currentVersion ? formatFileSize(currentVersion.fileSize) : ''}</span>
                       </div>
@@ -344,7 +353,7 @@ export default function MaterialLibrary() {
                     const currentVersion = (material.versions || []).find(
                       (v) => v.id === material.currentVersionId
                     );
-                    const typeColor = getMaterialTypeColor(material.type || material.file_type);
+                    const typeColor = getMaterialTypeColor((material.type || material.file_type) as MaterialType);
 
                     return (
                       <tr
@@ -370,7 +379,7 @@ export default function MaterialLibrary() {
                             className="badge"
                             style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
                           >
-                            {getMaterialTypeName(material.type || material.file_type)}
+                            {getMaterialTypeName((material.type || material.file_type) as MaterialType)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -386,7 +395,7 @@ export default function MaterialLibrary() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-500">
-                          {format(new Date(material.updatedAt), 'yyyy-MM-dd', { locale: zhCN })}
+                          {format(new Date(material.updatedAt ?? material.updated_at ?? 0), 'yyyy-MM-dd', { locale: zhCN })}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
@@ -461,13 +470,13 @@ export default function MaterialLibrary() {
                 <div className="flex items-center gap-2">
                   <span
                     className="badge"
-                    style={{
-                      backgroundColor: `${getMaterialTypeColor(selectedMaterial.type)}20`,
-                      color: getMaterialTypeColor(selectedMaterial.type),
+                      style={{
+                      backgroundColor: `${getMaterialTypeColor((selectedMaterial.type || selectedMaterial.file_type) as MaterialType)}20`,
+                      color: getMaterialTypeColor((selectedMaterial.type || selectedMaterial.file_type) as MaterialType),
                     }}
-                  >
-                    {getMaterialTypeName(selectedMaterial.type)}
-                  </span>
+                    >
+                      {getMaterialTypeName((selectedMaterial.type || selectedMaterial.file_type) as MaterialType)}
+                    </span>
                 </div>
               </div>
 
@@ -505,7 +514,7 @@ export default function MaterialLibrary() {
                       <p className="text-sm text-slate-600 mt-1">{version.fileName}</p>
                       <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
                         <span>
-                          上传于 {format(new Date(version.uploadedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+                          上传于 {format(new Date(version.uploadedAt ?? 0), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                         </span>
                         <div className="flex gap-1">
                           <button className="p-1 hover:bg-slate-200 rounded">

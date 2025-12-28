@@ -16,15 +16,19 @@ export interface Material {
     fileSize: number;
     uploadedAt?: string | Date;
     isDefault?: boolean;
+    notes?: string;
     tags: string[];
   }>;
   currentVersionId?: string;
   // Compatibility alias for camelCase user id
   userId?: string;
   file_type: string;
+  // Optional processing status for uploads
+  processing_status?: string;
   file_size?: number;
   storage_path?: string;
   category?: string;
+  ocrContent?: string;
   tags: string[];
   metadata: Record<string, any>;
   version: number;
@@ -34,8 +38,8 @@ export interface Material {
   created_at: string;
   updated_at: string;
   // Compatibility aliases for camelCase fields used across the UI
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface Application {
@@ -126,6 +130,8 @@ export interface Project {
   createdAt: Date;
   updatedAt: Date;
   notes?: string;
+  // Optional fields used by UI components
+  requirements?: RequirementItemLegacy[];
 }
 
 export type RequirementStatus =
