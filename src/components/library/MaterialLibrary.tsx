@@ -65,10 +65,11 @@ export default function MaterialLibrary() {
   // 过滤和排序材料
   const filteredMaterials = materials
     .filter((mat) => {
+      const displayName = (mat.name || mat.title || mat.filename || '').toString();
       const matchesSearch =
-        mat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mat.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = filterType === 'all' || mat.type === filterType;
+        displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (mat.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = filterType === 'all' || ((mat.type || mat.file_type) === filterType);
       return matchesSearch && matchesType;
     })
     .sort((a, b) => {
@@ -144,7 +145,7 @@ export default function MaterialLibrary() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">材料库</h1>
           <p className="text-slate-500 mt-1">
-            共 {materials.length} 种材料，{materials.reduce((sum, m) => sum + m.versions.length, 0)} 个版本
+            共 {materials.length} 种材料，{materials.reduce((sum, m) => sum + (m.versions?.length ?? m.version ?? 0), 0)} 个版本
           </p>
         </div>
         <button
@@ -259,10 +260,10 @@ export default function MaterialLibrary() {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredMaterials.map((material) => {
-                const currentVersion = material.versions.find(
+                const currentVersion = (material.versions || []).find(
                   (v) => v.id === material.currentVersionId
                 );
-                const typeColor = getMaterialTypeColor(material.type);
+                const typeColor = getMaterialTypeColor(material.type || material.file_type);
 
                 return (
                   <div
@@ -285,30 +286,30 @@ export default function MaterialLibrary() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-slate-900 truncate">
-                            {material.name}
+                            {material.name || material.title || material.filename}
                           </h3>
                           <p className="text-sm text-slate-500 mt-0.5">
-                            {getMaterialTypeName(material.type)}
+                            {getMaterialTypeName(material.type || material.file_type)}
                           </p>
                         </div>
                         <span
                           className="badge"
                           style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
                         >
-                          v{material.versions.length}
+                          v{material.versions?.length ?? material.version ?? 0}
                         </span>
                       </div>
 
                       {/* 标签 */}
                       <div className="flex flex-wrap gap-1 mt-3">
-                        {currentVersion?.tags.slice(0, 3).map((tag) => (
+                        {(currentVersion?.tags || []).slice(0, 3).map((tag) => (
                           <span key={tag} className="badge-gray text-xs">
                             {tag}
                           </span>
                         ))}
-                        {currentVersion && currentVersion.tags.length > 3 && (
+                        {currentVersion && ((currentVersion.tags?.length) ?? 0) > 3 && (
                           <span className="badge-gray text-xs">
-                            +{currentVersion.tags.length - 3}
+                            +{(currentVersion.tags?.length ?? 0) - 3}
                           </span>
                         )}
                       </div>
@@ -318,7 +319,7 @@ export default function MaterialLibrary() {
                         <span>
                           {format(new Date(material.updatedAt), 'yyyy-MM-dd', { locale: zhCN })}
                         </span>
-                        <span>{currentVersion && formatFileSize(currentVersion.fileSize)}</span>
+                        <span>{currentVersion ? formatFileSize(currentVersion.fileSize) : ''}</span>
                       </div>
                     </div>
                   </div>
@@ -340,10 +341,10 @@ export default function MaterialLibrary() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredMaterials.map((material) => {
-                    const currentVersion = material.versions.find(
+                    const currentVersion = (material.versions || []).find(
                       (v) => v.id === material.currentVersionId
                     );
-                    const typeColor = getMaterialTypeColor(material.type);
+                    const typeColor = getMaterialTypeColor(material.type || material.file_type);
 
                     return (
                       <tr
@@ -361,7 +362,7 @@ export default function MaterialLibrary() {
                             >
                               {getFileIcon(currentVersion?.fileName || '')}
                             </div>
-                            <span className="font-medium text-slate-900">{material.name}</span>
+                            <span className="font-medium text-slate-900">{material.name || material.title || material.filename}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -369,15 +370,15 @@ export default function MaterialLibrary() {
                             className="badge"
                             style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
                           >
-                            {getMaterialTypeName(material.type)}
+                            {getMaterialTypeName(material.type || material.file_type)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="badge-gray">v{material.versions.length}</span>
+                          <span className="badge-gray">v{material.versions?.length ?? material.version ?? 0}</span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1">
-                            {currentVersion?.tags.slice(0, 2).map((tag) => (
+                            {(currentVersion?.tags || []).slice(0, 2).map((tag) => (
                               <span key={tag} className="badge-gray text-xs">
                                 {tag}
                               </span>
@@ -443,7 +444,7 @@ export default function MaterialLibrary() {
               </button>
             </div>
 
-            <div className="p-4 space-y-6">
+                  <div className="p-4 space-y-6">
               {/* 基本信息 */}
               <div>
                 <label className="label">材料名称</label>
@@ -479,7 +480,7 @@ export default function MaterialLibrary() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {selectedMaterial.versions.map((version) => (
+                  {(selectedMaterial.versions || []).map((version) => (
                     <div
                       key={version.id}
                       className={`p-3 rounded-lg border ${
@@ -526,9 +527,8 @@ export default function MaterialLibrary() {
               <div>
                 <label className="label">标签</label>
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {selectedMaterial.versions
-                    .find((v) => v.id === selectedMaterial.currentVersionId)
-                    ?.tags.map((tag) => (
+                  {((selectedMaterial.versions || []).find((v) => v.id === selectedMaterial.currentVersionId)
+                    ?.tags || []).map((tag) => (
                       <span key={tag} className="badge-gray">
                         <Tag className="w-3 h-3 mr-1" />
                         {tag}
