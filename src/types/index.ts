@@ -19,6 +19,8 @@ export interface Material {
     tags: string[];
   }>;
   currentVersionId?: string;
+  // Compatibility alias for camelCase user id
+  userId?: string;
   file_type: string;
   file_size?: number;
   storage_path?: string;
