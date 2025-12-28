@@ -51,7 +51,7 @@ export default function ApplicationWorkspace({ application, onBack }: Props) {
         if (matchData) {
           matchMap[item.id] = matchData.map((m: any) => ({
             ...m,
-            material: materialsData?.find(mat => mat.id === m.material_id)
+            material: materialsData?.find((mat: Material) => mat.id === m.material_id)
           }));
         }
       }
