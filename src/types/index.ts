@@ -5,6 +5,20 @@ export interface Material {
   file_path: string;
   file_url?: string;
   title?: string;
+  // Legacy / UI compatibility aliases
+  name?: string;
+  type?: string;
+  // Versioning compatibility: array of versions for UI components that expect it
+  versions?: Array<{
+    id: string;
+    version: number;
+    fileName: string;
+    fileSize: number;
+    uploadedAt?: string | Date;
+    isDefault?: boolean;
+    tags: string[];
+  }>;
+  currentVersionId?: string;
   file_type: string;
   file_size?: number;
   storage_path?: string;
