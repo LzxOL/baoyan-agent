@@ -75,11 +75,11 @@ export default function MaterialLibrary() {
     .sort((a, b) => {
       switch (sortBy) {
         case 'updated':
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          return new Date(b.updatedAt ?? b.updated_at ?? 0).getTime() - new Date(a.updatedAt ?? a.updated_at ?? 0).getTime();
         case 'name':
-          return a.name.localeCompare(b.name, 'zh-CN');
+          return (a.name || a.title || a.filename).toString().localeCompare((b.name || b.title || b.filename).toString(), 'zh-CN');
         case 'type':
-          return a.type.localeCompare(b.type, 'zh-CN');
+          return (a.type || a.file_type || '').toString().localeCompare((b.type || b.file_type || '').toString(), 'zh-CN');
         case 'created':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         default:
