@@ -81,7 +81,7 @@ export default function MaterialLibrary() {
         case 'type':
           return (a.type || a.file_type || '').toString().localeCompare((b.type || b.file_type || '').toString(), 'zh-CN');
         case 'created':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdAt ?? b.created_at ?? 0).getTime() - new Date(a.createdAt ?? a.created_at ?? 0).getTime();
         default:
           return 0;
       }
