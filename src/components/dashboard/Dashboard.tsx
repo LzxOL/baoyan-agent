@@ -21,7 +21,7 @@ export default function Dashboard() {
 
   // 计算统计数据
   const totalMaterials = materials.reduce(
-    (sum, mat) => sum + mat.versions.length,
+    (sum, mat) => sum + (mat.version || 0),
     0
   );
   const activeProjects = projects.filter(
@@ -273,7 +273,7 @@ export default function Dashboard() {
               { type: 'competition', name: '竞赛证书', count: 0 },
               { type: 'paper', name: '学术成果', count: 0 },
             ].map((item) => {
-              const count = materials.filter((m) => m.type === item.type).length;
+              const count = materials.filter((m) => m.file_type === item.type).length;
               return (
                 <div
                   key={item.type}
