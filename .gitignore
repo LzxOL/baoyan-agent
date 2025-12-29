@@ -37,4 +37,5 @@ venv/
 *.tmp
 *.temp
 
-
+SUPABASE_INTEGRATION_README.md
+SUPABASE_SETUP.md
