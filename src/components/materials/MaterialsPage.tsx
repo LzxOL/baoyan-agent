@@ -8,10 +8,12 @@ import {
   GripHorizontal, ArrowRightLeft, FileWarning, RotateCw
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppStore } from '@/store/useAppStore';
 import { Material, MATERIAL_CATEGORIES, Category } from '@/types';
-import MaterialUpload from './MaterialUpload'; 
+import MaterialUpload from './MaterialUpload';
+import CoverInfoForm from './CoverInfoForm';
 import { PDFDocument } from 'pdf-lib';
 
 // --- Types 定义 ---
@@ -78,6 +80,7 @@ function ContextMenu({
 // --- 主页面组件 ---
 export default function MaterialsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   
   // --- 1. 数据状态 ---
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -104,6 +107,9 @@ export default function MaterialsPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   // iframe 加载状态
   const [iframeLoadingMap, setIframeLoadingMap] = useState<Record<string, boolean>>({});
+  // 封面信息表单状态
+  const [showCoverForm, setShowCoverForm] = useState(false);
+  const [coverInfo, setCoverInfo] = useState<any>(null);
   // 本地分类列表
   type CategoryItem = { value: string; label: string };
   const [categories, setCategories] = useState<CategoryItem[]>(() => MATERIAL_CATEGORIES.slice());
@@ -132,7 +138,14 @@ export default function MaterialsPage() {
   // --- 初始化加载数据 ---
   useEffect(() => {
     async function load() {
-      if (!user) return;
+      if (!user) {
+        // when logged out, ensure page refresh so other components update
+        setMaterials([]);
+        setCustomCategories([]);
+        setLoading(false);
+        try { router.refresh(); } catch (e) {}
+        return;
+      }
       setLoading(true);
 
       const { data: materialsData, error: materialsError } = await supabase
@@ -152,8 +165,46 @@ export default function MaterialsPage() {
       if (!categoriesError && categoriesData) setCustomCategories(categoriesData);
 
       setLoading(false);
+      // Ensure other parts of the app (server components / caches) refresh after login
+      try { router.refresh(); } catch (e) {}
     }
     load();
+  }, [user]);
+
+  // Listen for global auth changes triggered from Header or other places
+  useEffect(() => {
+    const handler = () => {
+      try { router.refresh(); } catch {}
+      // also reload client-side data
+      (async () => {
+        setLoading(true);
+        try {
+          if (user?.id) {
+            const { data: materialsData } = await supabase
+              .from('materials')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('uploaded_at', { ascending: false });
+            if (materialsData) setMaterials(materialsData);
+            const { data: categoriesData } = await supabase
+              .from('categories')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false });
+            if (categoriesData) setCustomCategories(categoriesData);
+          } else {
+            setMaterials([]);
+            setCustomCategories([]);
+          }
+        } catch (e) {
+          // ignore
+        } finally {
+          setLoading(false);
+        }
+      })();
+    };
+    window.addEventListener('auth-changed', handler);
+    return () => window.removeEventListener('auth-changed', handler);
   }, [user]);
 
   // Expose debug helpers
@@ -700,7 +751,7 @@ export default function MaterialsPage() {
     const newName = prompt("请输入新的文件名", m.filename);
     if (newName && newName !== m.filename) {
         await supabase.from('materials').update({ filename: newName }).eq('id', id);
-        setMaterials(prev => prev.map(x => x.id === id ? { ...x, filename: newName } : x));
+        setMaterials(prev => prev.map(x => x.id === id ? { ...x, filename: newName || x.filename } : x));
     }
   };
 
@@ -759,12 +810,50 @@ export default function MaterialsPage() {
   // ==========================
   const handleGeneratePDF = async () => {
     if (generatingPdf) return;
+    // 如果还没有封面信息，显示表单
+    if (!coverInfo) {
+      setShowCoverForm(true);
+      return;
+    }
+    await generatePDFWithCover();
+  };
+
+  const generatePDFWithCover = async () => {
     setGeneratingPdf(true);
     try {
       const entries = canvasItems.map(i => ({ item: i, mat: materials.find(m => m.id === i.materialId) })).filter(e => e.mat) as { item: CanvasItem; mat: Material }[];
       if (entries.length === 0) throw new Error('画布无有效文件');
 
+      // 1. 生成封面PDF
+      let coverPdfBytes: Uint8Array | null = null;
+      if (coverInfo) {
+        try {
+          const coverResponse = await fetch('/api/generate-cover', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(coverInfo),
+          });
+          if (coverResponse.ok) {
+            coverPdfBytes = new Uint8Array(await coverResponse.arrayBuffer());
+          } else {
+            console.warn('封面生成失败:', await coverResponse.text());
+          }
+        } catch (e) {
+          console.warn('封面生成失败:', e);
+        }
+      }
+
+      // 2. 合并所有PDF
       const doc = await PDFDocument.create();
+
+      // 如果有封面，先添加封面
+      if (coverPdfBytes) {
+        const coverDoc = await PDFDocument.load(coverPdfBytes);
+        const coverPages = await doc.copyPages(coverDoc, coverDoc.getPageIndices());
+        coverPages.forEach(p => doc.addPage(p));
+      }
+
+      // 添加画布中的其他文件
       for (const entry of entries) {
         const m = entry.mat;
         const rotation = entry.item.rotation || 0;
@@ -791,7 +880,7 @@ export default function MaterialsPage() {
       const uint8 = pdfBytes instanceof Uint8Array ? pdfBytes : new Uint8Array(pdfBytes as any);
       const blob = new Blob([uint8], { type: 'application/pdf' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `merged_${Date.now()}.pdf`; a.click();
-    } catch (e: any) { alert(e.message); } 
+    } catch (e: any) { alert(e.message); }
     finally { setGeneratingPdf(false); }
   };
 
@@ -801,8 +890,18 @@ export default function MaterialsPage() {
   const handleSubmitAgent = async () => {
     if (!agentInput.trim()) return;
     const text = agentInput;
-    setAgentInput(''); 
+    setAgentInput('');
     await agentArrangeFromText(text);
+  };
+
+  // ==========================
+  // 逻辑模块 F: 封面生成
+  // ==========================
+  const handleCoverFormSubmit = async (info: any) => {
+    setCoverInfo(info);
+    setShowCoverForm(false);
+    // 自动开始PDF生成
+    await generatePDFWithCover();
   };
 
   // ==========================
@@ -1244,15 +1343,24 @@ export default function MaterialsPage() {
             </div>
           </div>
         );
-      })()}
-    {/* Save toast */}
-    {saveStatus.status !== 'idle' && (
-      <div className="fixed right-6 bottom-6 z-[120]">
-        <div className={`px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${saveStatus.status === 'saving' ? 'bg-yellow-50 text-yellow-800' : saveStatus.status === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-          {saveStatus.message || (saveStatus.status === 'saving' ? '正在保存...' : saveStatus.status === 'success' ? '保存成功' : '保存失败')}
+      })(      )}
+
+      {/* 封面信息表单 */}
+      <CoverInfoForm
+        isOpen={showCoverForm}
+        onClose={() => setShowCoverForm(false)}
+        onSubmit={handleCoverFormSubmit}
+        initialData={coverInfo}
+      />
+
+      {/* Save toast */}
+      {saveStatus.status !== 'idle' && (
+        <div className="fixed right-6 bottom-6 z-[120]">
+          <div className={`px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${saveStatus.status === 'saving' ? 'bg-yellow-50 text-yellow-800' : saveStatus.status === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+            {saveStatus.message || (saveStatus.status === 'saving' ? '正在保存...' : saveStatus.status === 'success' ? '保存成功' : '保存失败')}
+          </div>
         </div>
-      </div>
-    )}
+      )}
     </div>
   );
 }

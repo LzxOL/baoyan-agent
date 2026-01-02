@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SignInModalProps {
   open: boolean;
@@ -29,21 +30,15 @@ export default function SignInModal({ open, onClose, onSignedIn }: SignInModalPr
 
   if (!open) return null;
 
+  const { signIn } = useAuth();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-        return;
-      }
+      // use AuthContext signIn to ensure context state updates
+      await signIn(email, password);
 
       // persist email if user requested
       try {

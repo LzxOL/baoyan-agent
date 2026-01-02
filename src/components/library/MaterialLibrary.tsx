@@ -453,7 +453,7 @@ export default function MaterialLibrary() {
               </button>
             </div>
 
-                  <div className="p-4 space-y-6">
+            <div className="p-4 space-y-6">
               {/* 基本信息 */}
               <div>
                 <label className="label">材料名称</label>
@@ -470,13 +470,13 @@ export default function MaterialLibrary() {
                 <div className="flex items-center gap-2">
                   <span
                     className="badge"
-                      style={{
+                    style={{
                       backgroundColor: `${getMaterialTypeColor((selectedMaterial.type || selectedMaterial.file_type) as MaterialType)}20`,
                       color: getMaterialTypeColor((selectedMaterial.type || selectedMaterial.file_type) as MaterialType),
                     }}
-                    >
+                  >
                       {getMaterialTypeName((selectedMaterial.type || selectedMaterial.file_type) as MaterialType)}
-                    </span>
+                  </span>
                 </div>
               </div>
 

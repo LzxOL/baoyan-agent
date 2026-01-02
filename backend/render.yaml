@@ -4,7 +4,8 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      apt-get update && apt-get install -y libreoffice && pip install -r requirements.txt
     startCommand: uvicorn python_parse_service:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: OPENAI_API_KEY
@@ -12,5 +13,9 @@ services:
       - key: OPENAI_BASE_URL
         sync: false
       - key: OPENAI_MODEL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
 

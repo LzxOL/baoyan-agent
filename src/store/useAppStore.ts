@@ -120,7 +120,7 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           materials: state.materials.map((m) =>
             m.id === materialId
-                  ? {
+              ? {
                   ...m,
                   versions: [...(m.versions || []), version],
                   currentVersionId: version.isDefault ? version.id : m.currentVersionId,
@@ -135,7 +135,7 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           materials: state.materials.map((m) =>
             m.id === materialId
-                  ? {
+              ? {
                   ...m,
                   currentVersionId: versionId,
                   versions: (m.versions || []).map((v) => ({

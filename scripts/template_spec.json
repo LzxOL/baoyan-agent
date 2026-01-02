@@ -1,0 +1,39 @@
+{
+  "fields": {
+    "学生姓名": ["学  生  姓  名", "学生姓名", "姓名"],
+    "申请专业": ["申  请  专  业", "申请专业", "专业"],
+    "本科院校": ["本  科  院  校", "本科院校", "院校"],
+    "毕业专业": ["毕  业  专  业", "毕业专业"],
+    "联系方式": ["联  系  方  式", "联系方式", "联系电话"],
+    "邮箱": ["邮            箱", "邮箱", "电子邮箱"]
+  },
+  "keys_priority": ["学生姓名", "申请专业", "本科院校", "毕业专业", "联系方式", "邮箱"],
+  "placeholder_chars": ["×", "X"],
+  "table": {
+    "left_col_width_in": 2.2,
+    "right_col_width_in": 4.0,
+    "left_cell_alignment": "right",
+    "right_cell_alignment": "center",
+    "vertical_alignment": "center"
+  },
+  "header": {
+    "university_field": "本科院校",
+    "department_field_fallback": "申请专业"
+  },
+  "logo": {
+    "search_suffixes": [".svg", ".png", ".jpg", ".jpeg"],
+    "scale_factor": 3.0,
+    "dpi": 300
+  },
+  "defaults": {
+    "学生姓名": "王小明",
+    "申请专业": "计算机科学与技术",
+    "本科院校": "北京大学",
+    "毕业专业": "软件工程",
+    "联系方式": "138-0000-0000",
+    "邮箱": "wangxiaoming@pku.edu.cn"
+  }
+}
+
+
+

@@ -15,6 +15,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>;
   signUp: (email: string, password: string, name: string) => Promise<any>;
   signOut: () => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,7 +38,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user || null);
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+
+        // 如果用户刚刚登录，检查并创建profile
+        if (event === 'SIGNED_IN' && currentUser) {
+          // 检查是否已有profile，如果没有则创建
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .single();
+
+          if (!existingProfile) {
+            await supabase.from('profiles').insert({
+              user_id: currentUser.id,
+              email: currentUser.email,
+              name: currentUser.user_metadata?.name || null
+            });
+          }
+        }
+
         setLoading(false);
       }
     );
@@ -56,18 +77,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      options: {
+        data: { name },
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
     });
     if (error) throw error;
 
-    if (data?.user) {
-      setUser(data.user);
-      await supabase.from('profiles').insert({
-        user_id: data.user.id,
-        email,
-        name
-      });
-    }
+    // 注意：注册后不要立即创建profile，因为用户还未验证邮箱
+    // profile将在邮箱验证成功后创建，或在用户首次登录时创建
+
     return data;
   }
 
@@ -76,8 +95,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }
 
+  async function resendVerificationEmail(email: string) {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+    if (error) throw error;
+    return data;
+  }
+  // notify other windows/components when auth changes
+  useEffect(() => {
+    try { window.dispatchEvent(new CustomEvent('auth-changed')); } catch (e) {}
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resendVerificationEmail }}>
       {children}
     </AuthContext.Provider>
   );

@@ -276,7 +276,7 @@ export default function MaterialManagement() {
                   <span>
                     {format(new Date(material.uploaded_at ?? 0), 'yyyy-MM-dd', { locale: zhCN })}
                   </span>
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     {getStatusIcon(material.processing_status || 'pending')}
                   </div>
                 </div>
@@ -334,10 +334,10 @@ export default function MaterialManagement() {
                     {formatFileSize(material.file_size ?? 0)}
                   </td>
                   <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         {getStatusIcon(material.processing_status || 'pending')}       
                         {getStatusBadge(material.processing_status || 'pending')}      
-                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-500">
                     {format(new Date(material.uploaded_at ?? 0), 'yyyy-MM-dd HH:mm', { locale: zhCN })}

@@ -1,13 +1,29 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import json
 import re
+import tempfile
+import shutil
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
-# uvicorn python_parse_service:app --host 127.0.0.1 --port 8000
+from supabase import create_client, Client
+import requests
+'''''
+# 进入 backend 目录（如果后端在 backend）
+cd /home/root1/baoyan_agent/backend
+
+# 2. 激活虚拟环境
+source venv/bin/activate
+
+# 3. 启动服务
+uvicorn python_parse_service:app --host 127.0.0.1 --port 8000
+
+
+'''''
 load_dotenv()
 
 try:
@@ -219,6 +235,147 @@ Output JSON only. Prioritize category matches over filename-only matches.
     except Exception as e:
         print(f"Match Error: {e}")
         return JSONResponse(content={"matches": []})
+
+# Supabase storage helper functions
+def download_from_supabase(bucket: str, path: str) -> bytes:
+    """Download file from Supabase storage using HTTP requests"""
+    supabase_url = os.getenv("SUPABASE_URL")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not service_key:
+        raise Exception("Supabase credentials not found")
+
+    download_url = f"{supabase_url}/storage/v1/object/{bucket}/{path}"
+    headers = {
+        "Authorization": f"Bearer {service_key}",
+        "apikey": service_key
+    }
+
+    response = requests.get(download_url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"HTTP {response.status_code}: {response.text}")
+
+    return response.content
+
+class GenerateCoverRequest(BaseModel):
+    fields: Dict[str, str]
+    school: str
+
+# --- 3. Generate Cover (封面生成) 接口 ---
+@app.post("/generate-cover")
+def generate_cover(req: GenerateCoverRequest):
+    from generate_school_cover import main as generate_cover_main
+    import sys
+    import io
+    from contextlib import redirect_stdout, redirect_stderr
+
+    # Get field mapping
+    fields = req.fields
+    school = req.school
+
+    # Create temporary directory for processing
+    temp_dir = tempfile.mkdtemp()
+    try:
+        temp_path = Path(temp_dir)
+
+        # Download template from Supabase
+        template_bucket = "institution-assets"
+        template_path = "pdf_generate/config/word_template.docx"
+
+        template_content = download_from_supabase(template_bucket, template_path)
+        template_local_path = temp_path / "template.docx"
+        with open(template_local_path, 'wb') as f:
+            f.write(template_content)
+
+        # Download logo mapping (optional)
+        logo_mapping_path = "pdf_generate/config/logo_mapping.json"
+        try:
+            mapping_content = download_from_supabase(template_bucket, logo_mapping_path)
+            mapping_local_path = temp_path / "logo_mapping.json"
+            with open(mapping_local_path, 'wb') as f:
+                f.write(mapping_content)
+        except Exception as e:
+            print(f"Logo mapping download failed (optional): {e}")
+
+        # Download template spec (optional)
+        template_spec_path = "pdf_generate/config/template_spec.json"
+        try:
+            spec_content = download_from_supabase(template_bucket, template_spec_path)
+            spec_local_path = temp_path / "template_spec.json"
+            with open(spec_local_path, 'wb') as f:
+                f.write(spec_content)
+        except Exception as e:
+            print(f"Template spec download failed (optional): {e}")
+
+        # Create logos directory - for now, skip logo downloading to avoid complex listing
+        logos_dir = temp_path / "logos"
+        logos_dir.mkdir(exist_ok=True)
+        # TODO: Implement logo downloading if needed
+
+        # Generate output path
+        output_path = temp_path / "cover.pdf"
+
+        # Prepare arguments for the script
+        sys.argv = [
+            'generate_school_cover.py',
+            '--template', str(template_local_path),
+            '--logos', str(logos_dir),
+            '--school', school,
+            '--output', str(output_path),
+            '--fields', json.dumps(fields)
+        ]
+
+        # Add spec path if it exists
+        if (temp_path / "template_spec.json").exists():
+            sys.argv.extend(['--spec', str(temp_path / "template_spec.json")])
+
+        # Capture output
+        stdout_capture = io.StringIO()
+        stderr_capture = io.StringIO()
+
+        with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
+            result = generate_cover_main(sys.argv[1:])
+
+        stdout_output = stdout_capture.getvalue()
+        stderr_output = stderr_capture.getvalue()
+
+        print("Cover generation stdout:", stdout_output)
+        if stderr_output:
+            print("Cover generation stderr:", stderr_output)
+
+        if result != 0 or not output_path.exists():
+            error_msg = f"封面生成失败 (exit code: {result})\nstdout: {stdout_output}\nstderr: {stderr_output}"
+            print(error_msg)
+            raise HTTPException(status_code=500, detail=error_msg)
+
+        # Return the generated PDF content directly
+        with open(output_path, 'rb') as f:
+            pdf_content = f.read()
+
+        # Return PDF content as response
+        from fastapi.responses import Response
+        return Response(
+            content=pdf_content,
+            media_type='application/pdf',
+            headers={"Content-Disposition": "attachment; filename=cover.pdf"}
+        )
+
+    except Exception as e:
+        # Clean up on error
+        import shutil
+        try:
+            shutil.rmtree(temp_dir)
+        except:
+            pass
+        print(f"Cover generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"封面生成失败: {str(e)}")
+    finally:
+        # Additional cleanup
+        import shutil
+        try:
+            shutil.rmtree(temp_dir)
+        except:
+            pass
 
 if __name__ == "__main__":
     import uvicorn
